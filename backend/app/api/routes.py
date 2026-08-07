@@ -1,16 +1,20 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, status
 from app.schemas.chat import (
     ChatRequest, ChatResponse, QueryRequest, QueryResponse,
     FeedbackRequest
 )
 from app.schemas.base import ResponseModel
 from app.services.chat_service import ChatService
+from app.services.llm_service import LLMService
+from app.services.rag_service import RAGService
 from app.utils.logger import get_logger
 
 router = APIRouter()
 logger = get_logger(__name__)
 
 # Service instances
+llm_service = LLMService()
+rag_service = RAGService(llm_service=llm_service)
 chat_service = ChatService()
 
 
@@ -25,7 +29,7 @@ async def chat(request: ChatRequest):
         result = await chat_service.process_chat_message(
             message=request.message,
             conversation_id=request.conversation_id,
-            rag_service=None  # Will be injected later with RAG service
+            rag_service=rag_service
         )
 
         return ResponseModel(
@@ -53,7 +57,7 @@ async def query(request: QueryRequest):
         result = await chat_service.process_query(
             query=request.query,
             context=request.context,
-            rag_service=None  # Will be injected later with RAG service
+            rag_service=rag_service
         )
 
         return ResponseModel(

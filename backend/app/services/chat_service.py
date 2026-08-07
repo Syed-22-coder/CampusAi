@@ -1,6 +1,7 @@
 import uuid
-from typing import List, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Dict, List, Optional, Sequence, Tuple
+
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -9,8 +10,9 @@ logger = get_logger(__name__)
 class ChatService:
     """Service for handling chat interactions"""
 
-    def __init__(self):
+    def __init__(self, rag_service=None):
         self.conversations = {}  # Store conversation history in memory (temp)
+        self.default_rag_service = rag_service
         self.logger = logger
 
     async def process_chat_message(
@@ -35,36 +37,38 @@ class ChatService:
             if not conversation_id:
                 conversation_id = str(uuid.uuid4())
 
-            # Store message in conversation history
             if conversation_id not in self.conversations:
                 self.conversations[conversation_id] = []
+
+            previous_messages = list(self.conversations[conversation_id])
+            active_rag_service = rag_service or self.default_rag_service
 
             self.conversations[conversation_id].append({
                 "role": "user",
                 "content": message,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             })
 
-            # Retrieve context from RAG if available
             sources = []
-            context = ""
+            response_text = ""
 
-            if rag_service:
+            if active_rag_service:
                 try:
-                    context, sources = await rag_service.retrieve_context(message)
+                    response_text, sources, _ = await active_rag_service.chat(
+                        message=message,
+                        chat_history=self._build_chat_history(previous_messages),
+                    )
                 except Exception as e:
                     self.logger.warning(f"RAG retrieval failed: {str(e)}")
                     sources = []
-                    context = ""
+                    response_text = self._format_response(message, "")
+            else:
+                response_text = self._format_response(message, "")
 
-            # Format response (placeholder - will be replaced with LLM call)
-            response_text = self._format_response(message, context)
-
-            # Store assistant response
             self.conversations[conversation_id].append({
                 "role": "assistant",
                 "content": response_text,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             })
 
             self.logger.info(
@@ -107,10 +111,11 @@ class ChatService:
             sources = []
             answer = ""
             confidence = 0.0
+            active_rag_service = rag_service or self.default_rag_service
 
-            if rag_service:
+            if active_rag_service:
                 try:
-                    answer, sources, confidence = await rag_service.query(query, context)
+                    answer, sources, confidence = await active_rag_service.query(query, context)
                 except Exception as e:
                     self.logger.warning(f"Query processing failed: {str(e)}")
                     answer = "I couldn't find information about that. Please try rephrasing your question."
@@ -142,6 +147,21 @@ class ChatService:
     def get_conversation_history(self, conversation_id: str) -> List[Dict]:
         """Get conversation history"""
         return self.conversations.get(conversation_id, [])
+
+    def _build_chat_history(self, messages: Sequence[Dict]) -> List[Tuple[str, str]]:
+        chat_history: List[Tuple[str, str]] = []
+        pending_user_message: Optional[str] = None
+
+        for message in messages:
+            role = message.get("role")
+            content = message.get("content", "")
+            if role == "user":
+                pending_user_message = content
+            elif role == "assistant" and pending_user_message is not None:
+                chat_history.append((pending_user_message, content))
+                pending_user_message = None
+
+        return chat_history
 
     def _format_response(self, message: str, context: str) -> str:
         """Format response with context (placeholder)"""

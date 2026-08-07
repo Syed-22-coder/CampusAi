@@ -65,4 +65,3 @@ To ensure project success within the given timeframe, the following risks and mi
 * **AI & Database:** LangChain, Chroma (Vector Database), OpenAI-compatible API
 * **Knowledge Base:** JSON / Markdown
 * **Additional Integrations:** TalkingHead (Avatar), Browser Speech API (Text-to-Speech)
-> **Note:** This draft needs to be reviewed and finalized in Meeting 3 before coding begins.

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional
 
 
@@ -7,19 +7,31 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=1000)
     conversation_id: Optional[str] = Field(None, description="Optional conversation ID for multi-turn chat")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "message": "What are the admissions requirements?",
-                "conversation_id": "conv_123"
+                "conversation_id": "conv_123",
             }
         }
+    )
+
+
+class Source(BaseModel):
+    """Source citation model"""
+
+    title: str
+    excerpt: str
+    relevance: Optional[float] = Field(None, ge=0, le=1)
+    url: Optional[str] = None
+    section: Optional[str] = None
+    source_path: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
     """Response model for chat endpoint"""
     response: str
-    sources: List[dict] = Field(default=[], description="Source citations")
+    sources: List[Source] = Field(default_factory=list, description="Source citations")
     conversation_id: str
 
 
@@ -28,20 +40,21 @@ class QueryRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=1000)
     context: Optional[str] = Field(None, description="Optional context for the query")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "query": "Tell me about engineering programs",
-                "context": "I'm interested in full-time programs"
+                "context": "I'm interested in full-time programs",
             }
         }
+    )
 
 
 class QueryResponse(BaseModel):
     """Response model for query endpoint"""
     answer: str
     confidence: float = Field(..., ge=0, le=1)
-    sources: List[dict] = Field(default=[])
+    sources: List[Source] = Field(default_factory=list)
 
 
 class FeedbackRequest(BaseModel):
@@ -49,10 +62,3 @@ class FeedbackRequest(BaseModel):
     response_id: str
     rating: int = Field(..., ge=1, le=5, description="Rating from 1-5")
     comment: Optional[str] = Field(None, max_length=500)
-
-
-class Source(BaseModel):
-    """Source citation model"""
-    title: str
-    excerpt: str
-    relevance: Optional[float] = Field(None, ge=0, le=1)

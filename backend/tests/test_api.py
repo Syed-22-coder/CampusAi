@@ -1,8 +1,37 @@
 import pytest
 from fastapi.testclient import TestClient
+from app.api import routes
 from main import app
 
 client = TestClient(app)
+
+
+class StubRAGService:
+    async def retrieve_context(self, query, k=3):
+        return (
+            "Admissions questions are handled by Enrolment Services.",
+            [{"title": "Departments", "excerpt": "Admissions / Enrolment Services handles applications."}],
+        )
+
+    async def query(self, query, context=None, k=3):
+        return (
+            "Admissions questions are handled by Enrolment Services.",
+            [{"title": "Departments", "excerpt": "Admissions / Enrolment Services handles applications."}],
+            0.91,
+        )
+
+    async def chat(self, message, chat_history=None, k=3):
+        return (
+            "Admissions questions are handled by Enrolment Services.",
+            [{"title": "Departments", "excerpt": "Admissions / Enrolment Services handles applications."}],
+            0.91,
+        )
+
+
+@pytest.fixture(autouse=True)
+def stub_rag_service(monkeypatch):
+    monkeypatch.setattr(routes, "rag_service", StubRAGService())
+    routes.chat_service.conversations.clear()
 
 
 class TestHealthEndpoints:

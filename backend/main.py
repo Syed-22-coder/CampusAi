@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
@@ -69,7 +70,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "success": False,
             "error": "Validation Error",
             "message": "Invalid request parameters",
-            "details": exc.errors()
+            "details": jsonable_encoder(exc.errors())
         }
     )
 

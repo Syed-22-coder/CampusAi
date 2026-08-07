@@ -79,5 +79,3 @@ These define system attributes such as performance, security, and usability.
 4.  **LLM Generation:** LangChain sends the user query + retrieved context to the OpenAI-compatible LLM.
 5.  **API Response:** FastAPI receives the answer and formats it into a JSON response (including `answer_text` and `source_citations`) and sends it back to the frontend.
 6.  **UI Update & TTS:** The Next.js frontend displays the text and sources, while triggering the Browser Speech API to read the text aloud through the Avatar.
-
-> **Note:** This draft needs to be reviewed and finalized in Meeting 3 before backend and frontend development begins.
